@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<install version="1.5" type="sef_ext">
+	<name>Virtuemart</name>
+	<author>VampiRUS</author>
+	<creationDate>14.02.2011</creationDate>
+	<copyright></copyright>
+	<license>GNU/GPLv3 http://www.gnu.org/copyleft/gpl.html</license>
+	<authorEmail>vamp1rus@yandex.ru</authorEmail>
+	<authorUrl>vampirus.ru</authorUrl>
+	<version>2.0.33</version>
+	<description>Adds SEO support for Virutemart component.</description>
+	<files>
+		<filename sef_ext="virtuemart">com_virtuemart.php</filename>
+	</files>
+	<params/>
+</install>
