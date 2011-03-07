@@ -8,7 +8,7 @@ class SefExt_com_virtuemart extends SefExt
 		static $tree = null;  // V 1.2.4.m  $tree must an array based on current language
 		 
 		if(empty($tree)){
-		  $q  = "SELECT c.category_name, c.category_id, x.category_parent_id FROM #__vm_category AS c" ;
+		  $q  = "SELECT c.category_name, c.category_id, x.category_parent_id,c.category_description FROM #__vm_category AS c" ;
 		  $q .= "\n LEFT JOIN #__vm_category_xref AS x ON c.category_id = x.category_child_id;";
 		  //$q .= "\n WHERE c.category_publish = 'Y';"; // V x
 		  $db->setQuery( $q );
@@ -21,6 +21,9 @@ class SefExt_com_virtuemart extends SefExt
 		do {               // all categories and subcategories. We don't really need id, as path
 		  $title[] = $tree[ $category_id ]->category_name;                           // will always be unique
 		  $category_id = $tree[ $category_id ]->category_parent_id;
+		  if( empty($this->category_desc) ) {
+                $this->category_desc = stripslashes($row->category_description);
+           }
 		} while( $category_id != 0 );
 		return array_reverse( $title );
 	}
@@ -81,7 +84,7 @@ class SefExt_com_virtuemart extends SefExt
 		  // this is a trick to counter a 'bug' in VM 1.0.10 when using SEF URL
 		  setcookie( 'VMCHECK', 'OK', time()+60*60, '/' );
 		}
-		if (!$page == "shop.index"){
+		if ($page != "shop.index"){
 			$title[] = "eshop";
 		} else {
 			$title[] = '';
@@ -97,6 +100,7 @@ class SefExt_com_virtuemart extends SefExt
 				$title[] = $manufacturer_name;
 			}
 			//show category only
+			$this->metadesc = $this->category_desc;
 			if (!empty($category_id))
 			{
 				$title = array_merge( $title, $this->_vm_sef_get_category_array( $database, $category_id));
@@ -111,9 +115,11 @@ class SefExt_com_virtuemart extends SefExt
 			{
 				$title = array_merge( $title, $this->_vm_sef_get_category_array( $database, $category_id));
 			}
-			$sql = "SELECT product_name FROM #__vm_product WHERE product_id=".$product_id." LIMIT 1";
+			$sql = "SELECT product_name,product_s_desc FROM #__vm_product WHERE product_id=".$product_id." LIMIT 1";
 			$database->setQuery($sql);
-			$product_name = $database->loadResult();
+			$data = $database->loadObject();
+			$product_name = $data->product_name;
+			$this->metadesc = $data->product_s_desc;
 			$title[] = $product_name;
 		break;
 
@@ -244,8 +250,9 @@ class SefExt_com_virtuemart extends SefExt
 	if ($pshop_mode == 'admin')$title = array();
 		$newUri = $uri;
 		if (count($title) > 0) {
+			$meta = $this->getMetaTags();
 			$this->_createNonSefVars($uri);
-			$newUri = JoomSEF::_sefGetLocation($uri, $title, @$task, @$limit, @$limitstart, @$lang, $this->nonSefVars);
+			$newUri = JoomSEF::_sefGetLocation($uri, $title, @$task, @$limit, @$limitstart, @$lang, $this->nonSefVars,null, $meta);
 		}
 		return $newUri;
 	}
