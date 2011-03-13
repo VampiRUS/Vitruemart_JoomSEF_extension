@@ -12,5 +12,11 @@
 	<files>
 		<filename sef_ext="virtuemart">com_virtuemart.php</filename>
 	</files>
-	<params/>
+	<params>
+		<param name="title_sep" type="text" default="/" label="title separator" description="title separator"/>
+		<param name="flypage" type="radio" default="0" label="include flypage" description="include flypage">
+ 		  <option value="0">No</option>
+ 		  <option value="1">Yes</option>
+ 	    </param>
+	</params>
 </install>

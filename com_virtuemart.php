@@ -25,7 +25,9 @@ class SefExt_com_virtuemart extends SefExt
                 $this->category_desc = stripslashes($row->category_description);
            }
 		} while( $category_id != 0 );
-		return array_reverse( $title );
+		$title = array_reverse( $title );
+		$this->pagetitle = implode(' '.$this->params->get('title_sep', '/').' ', $title);
+		return  $title;
 	}
 	
 	
@@ -84,14 +86,12 @@ class SefExt_com_virtuemart extends SefExt
 		  // this is a trick to counter a 'bug' in VM 1.0.10 when using SEF URL
 		  setcookie( 'VMCHECK', 'OK', time()+60*60, '/' );
 		}
-		if ($page != "shop.index"){
-			$title[] = "eshop";
-		} else {
-			$title[] = '';
-		}
+		$title[] = JoomSEF::_getMenuTitle(@$option, @$task, @$Itemid);
 		if($shVmCChk)
 		$title[] = 'vmchk';
 		switch ($page){
+		case "shop.feed":
+			$title[] = 'feed';
 		case "shop.browse":
 			if (!empty($manufacturer_id)){
 				$sql = "SELECT mf_name FROM #__vm_manufacturer WHERE manufacturer_id=".$manufacturer_id." LIMIT 1";
@@ -100,13 +100,13 @@ class SefExt_com_virtuemart extends SefExt
 				$title[] = $manufacturer_name;
 			}
 			//show category only
-			$this->metadesc = $this->category_desc;
 			if (!empty($category_id))
 			{
 				$title = array_merge( $title, $this->_vm_sef_get_category_array( $database, $category_id));
 			} else {
 				$title[] = 'allproducts';
 			}
+			$this->metadesc = $this->category_desc;
 		break;
 		case "shop.ask":
 			$title[] = 'shop.ask';
@@ -114,13 +114,31 @@ class SefExt_com_virtuemart extends SefExt
 			if (!empty($category_id))
 			{
 				$title = array_merge( $title, $this->_vm_sef_get_category_array( $database, $category_id));
+			} else {
+				$sql = "SELECT category_id FROM #__vm_product_category_xref WHERE product_id=".$product_id." LIMIT 1";
+				$database->setQuery($sql);
+				$data = $database->loadObject();
+				$category_id = $data->category_id;
+				$title = array_merge( $title, $this->_vm_sef_get_category_array( $database, $category_id));
+			}
+			if (!empty($manufacturer_id)&& $this->params->get('manufacturer', '0') != '0'){
+				$sql = "SELECT mf_name FROM #__vm_manufacturer WHERE manufacturer_id=".$manufacturer_id." LIMIT 1";
+				$database->setQuery($sql);
+				$manufacturer_name = $database->loadResult();
+				$title[] = $manufacturer_name;
 			}
 			$sql = "SELECT product_name,product_s_desc FROM #__vm_product WHERE product_id=".$product_id." LIMIT 1";
 			$database->setQuery($sql);
 			$data = $database->loadObject();
 			$product_name = $data->product_name;
 			$this->metadesc = $data->product_s_desc;
+			if ($this->pagetitle)
+				$this->pagetitle .= ' ' . $this->params->get('title_sep', '/') . ' ';
+			$this->pagetitle .= $product_name;
 			$title[] = $product_name;
+			if ($this->params->get('flypage', '0')){
+				$title[] = $flypage;
+			}
 		break;
 
 		case "shop.manufacturer_page":
@@ -251,6 +269,9 @@ class SefExt_com_virtuemart extends SefExt
 		$newUri = $uri;
 		if (count($title) > 0) {
 			$meta = $this->getMetaTags();
+			if (! empty($this->pagetitle)) {
+                $meta['metatitle'] = str_replace('"', '&quot;', $this->pagetitle);
+            }
 			$this->_createNonSefVars($uri);
 			$newUri = JoomSEF::_sefGetLocation($uri, $title, @$task, @$limit, @$limitstart, @$lang, $this->nonSefVars,null, $meta);
 		}
