@@ -1,6 +1,11 @@
 <?php
 defined('_JEXEC') or die('Restricted access.');
 
+define( '_COM_SEF_PRIORITY_VIRTUEMART_PRODUCT_ITEMID',         15 );
+define( '_COM_SEF_PRIORITY_VIRTUEMART_PRODUCT',                20 );
+define( '_COM_SEF_PRIORITY_VIRTUEMART_CATEGORY_ITEMID',     25 );
+define( '_COM_SEF_PRIORITY_VIRTUEMART_CATEGORY',            30 );
+define( '_COM_SEF_PRIORITY_VIRTUEMART_ITEMID',    35 );
 class SefExt_com_virtuemart extends SefExt
 {
 	
@@ -42,6 +47,39 @@ class SefExt_com_virtuemart extends SefExt
     return $shName;
   }
 	
+	function beforeCreate(&$uri) {
+		$database =& JFactory::getDBO();
+		$vars = $uri->getQuery(true);
+		$query = $uri->getQuery();
+		extract($vars);
+		if (!empty($Itemid)){
+			$database->setQuery('SELECT params FROM #__menu WHERE id='.intval($Itemid));
+			$params = $database->loadResult();
+			$menu_params = new stdClass();
+			$menu_params = new JParameter($params);
+			if(empty($product_id) && $menu_params->get("product_id")){
+				$product_id=$menu_params->get("product_id");
+				$uri->setVar('product_id',$product_id);
+			}
+			if((strpos($query,'category') === FALSE) && $menu_params->get("category_id")){
+				$category_id=$menu_params->get("category_id");
+				$uri->setVar('category_id',$category_id);
+			}
+			if(empty($flypage) && $menu_params->get("flypage")){
+				$flypage=$menu_params->get("flypage");
+				$uri->setVar('flypage',$flypage);
+			}
+			if(empty($page) && $menu_params->get("page")){
+				$page=$menu_params->get("page");
+				$uri->setVar('page',$page);
+			}
+			else {
+				$page=$page?$page:"shop.browse";
+				$uri->setVar('page',$page);
+			}
+		}
+
+	}
 	function _createNonSefVars(&$uri)
     {
         if (isset($this->nonSefVars) && isset($this->ignoreVars))
@@ -86,7 +124,7 @@ class SefExt_com_virtuemart extends SefExt
 		  // this is a trick to counter a 'bug' in VM 1.0.10 when using SEF URL
 		  setcookie( 'VMCHECK', 'OK', time()+60*60, '/' );
 		}
-		$title[] = JoomSEF::_getMenuTitle(@$option, @$task, @$Itemid);
+/*		$title[] = JoomSEF::_getMenuTitle(@$option, @$task, @$Itemid); */
 		if($shVmCChk)
 		$title[] = 'vmchk';
 		switch ($page){
@@ -273,9 +311,51 @@ class SefExt_com_virtuemart extends SefExt
                 $meta['metatitle'] = str_replace('"', '&quot;', $this->pagetitle);
             }
 			$this->_createNonSefVars($uri);
-			$newUri = JoomSEF::_sefGetLocation($uri, $title, @$task, @$limit, @$limitstart, @$lang, $this->nonSefVars,null, $meta);
+            $priority = $this->getPriority($uri);
+			$newUri = JoomSEF::_sefGetLocation($uri, $title, @$task, @$limit, @$limitstart, @$lang, $this->nonSefVars,null, $meta,$priority);
 		}
 		return $newUri;
 	}
+    function getPriority(&$uri)
+    {
+        $itemid = $uri->getVar('Itemid');
+        $page = $uri->getVar('page');
+		$database = JFactory::getDBO();
+		if (!empty($itemid)){
+			$database->setQuery('SELECT params FROM #__menu WHERE id='.intval($itemid));
+			$params = $database->loadResult();
+			$menu_params = new stdClass();
+			$menu_params = new JParameter($params);
+			if(empty($product_id) && $menu_params->get("product_id"))
+				$product_id=$menu_params->get("product_id");
+			if((strpos($query,'category') === FALSE) && $menu_params->get("category_id"))
+				$category_id=$menu_params->get("category_id");
+			if(empty($flypage) && $menu_params->get("flypage"))
+				$flypage=$menu_params->get("flypage");
+			if(empty($page) && $menu_params->get("page"))
+				$page=$menu_params->get("page");
+			else 
+				$page=$page?$page:"shop.browse";
+		}
+
+		if ($page == "shop.browse"){
+			if (!isset($category_id))
+				return _COM_SEF_PRIORITY_VIRTUEMART_ITEMID;
+			if (!$itemid){
+				return _COM_SEF_PRIORITY_VIRTUEMART_CATEGORY;
+			} else {
+				return _COM_SEF_PRIORITY_VIRTUEMART_CATEGORY_ITEMID;
+			}
+	}
+					
+		if ($page == "shop.product_details"){
+			if (!$itemid){
+				return _COM_SEF_PRIORITY_VIRTUEMART_PRODUCT;
+			} else {
+				return _COM_SEF_PRIORITY_VIRTUEMART_PRODUCT_ITEMID;
+			}
+		}
+		return null;
+    }
 }
 ?>
